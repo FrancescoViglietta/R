@@ -1,0 +1,89 @@
+---
+title: "8 lag di gdp e 2 lag di fred"
+author: "Francesco Viglietta"
+date: "2023-10-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("C:/Users/Utente/Desktop/Machine Learning project")
+library(readr)
+library(tibble)
+library(tidyverse)
+library(readxl)
+library(writexl)
+quarterly <- read_csv("QUARTERLY.csv")
+
+quarterly <-quarterly[-1, ] 
+quarterly <-quarterly[-(260:261),] 
+
+
+
+for (i in 2:ncol(quarterly)) {
+  if (quarterly[1, i] == 5) {
+    column <- log(as.numeric(unlist(quarterly[, i])))
+    quarterly[-1, i] <- diff(column)
+  } 
+  else if (quarterly[1, i] == 2) {
+    column <- quarterly[, i]
+    quarterly[-1, i] <- diff(as.numeric(unlist(column)), differences = 1L)
+  } 
+  else if (quarterly[1, i] == 3) {
+    column <- quarterly[, i]
+    quarterly[, i] <- diff(as.numeric(unlist(column)), differences = 2L)
+  } 
+  else if (quarterly[1, i] == 6) {
+    column <- log(as.numeric(unlist(quarterly[, i])))
+    quarterly[, i] <- c(6, NA, diff(column, differences = 2L)) 
+  }
+}
+
+#quarterly<- quarterly[-262, ]
+quarterly<- quarterly[-1, ]
+quarterly<- quarterly[,-2]
+
+
+
+
+
+
+
+
+
+```
+
+
+
+
+
+
+```{r}
+
+
+num_lags <- 2
+
+lagged_FRED <- data.frame(Date = quarterly$sasdate)
+
+# Iterate over the columns in the original data frame
+for (i in names(quarterly)) {
+  if (i != "sasdate") {
+    # Create lagged versions of the variable
+    for (lag in 1:num_lags) {
+      lagged_FRED <- lagged_FRED %>%
+        mutate(!!paste0(i, "_lag", lag) := lag(quarterly[[i]], lag))
+    }
+  }
+}
+#lagged_FRED <- lagged_FRED[-257,]
+lagged_FRED <- lagged_FRED[-(1:2),]
+
+
+path <- "C:/Users/Utente/Desktop/Machine Learning project/lagged_FRED_buono.xls"
+write_xlsx(lagged_FRED,path)
+
+
+
+
+```
+

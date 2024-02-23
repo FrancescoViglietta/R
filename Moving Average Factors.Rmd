@@ -1,0 +1,196 @@
+---
+title: "Moving Average Factors"
+author: "Francesco Viglietta"
+date: "2023-10-07"
+output: html_document
+---
+## Loading the FRED-QD dataset and transforming data for stationarity
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+setwd("C:/Users/Utente/Desktop/Machine Learning project")
+library(readr)
+library(tibble)
+library(tidyverse)
+library(readxl)
+library(writexl)
+quarterly <- read_csv("C:/Users/Utente/Desktop/Machine Learning project/QUARTERLY.csv") 
+
+quarterly <-quarterly[-1, ] 
+#quarterly <-quarterly[, -248] 
+
+
+
+for (i in 2:ncol(quarterly)) {
+  if (quarterly[1, i] == 5) {
+    column <- log(as.numeric(unlist(quarterly[, i])))
+    quarterly[-1, i] <- diff(column)
+  } 
+  else if (quarterly[1, i] == 2) {
+    column <- quarterly[, i]
+    quarterly[-1, i] <- diff(as.numeric(unlist(column)), differences = 1L)
+  } 
+  else if (quarterly[1, i] == 3) {
+    column <- quarterly[, i]
+    quarterly[, i] <- diff(as.numeric(unlist(column)), differences = 2L)
+  } 
+  else if (quarterly[1, i] == 6) {
+    column <- log(as.numeric(unlist(quarterly[, i])))
+    quarterly[, i] <- c(6, NA, diff(column, differences = 2L)) 
+  }
+}
+
+#quarterly<- quarterly[-262, ]
+quarterly<- quarterly[-(1:5), ]
+GDP<- quarterly[,(1:2)]
+
+path <- "C:/Users/Utente/Desktop/Machine Learning project/GDP_trasf.xls"
+write_xlsx(GDP,path)
+
+
+
+```
+
+
+## Dropping variables with NA approximatively until 1989 
+
+```{r}
+dropvector <- c("OUTMS", "TCU", "LNS13023621", "LNS13023621", "LNS13023705", "LNS13023569", "LNS13023557","HOAMS","AWHNONAG","ACOGNOx","ANDENOx","INVCQRMTSPL","WPU0531","CUSR0000SEHC","COMPRMS","OPHMFG","ULCMFG","MORTGAGE30US","MORTG10YRx","REVOLSLx","DRIWCIL","USEPUINDXM","NASDAQCOM","GFDEGDQ188S","GFDEBTNx", "AHETPIx","VIXCLSx", "USSTHPI", "SPCS10RSA","SPCS20RSA", "TWEXAFEGSMTHx", "EXUSEU", "PERMIT", "PERMITNE","PERMITMW","PERMITS","PERMITW")
+
+
+quarterly <- quarterly %>% select(-one_of(dropvector))
+
+vectorofnames <- colnames(quarterly)
+vectorofnames[-1]
+
+
+
+```
+Permits variables and Nasdaq i think should be included asap
+
+
+
+
+
+
+## Creating 8 lags of the all dataset
+```{r }
+column_names<- colnames(GDP)
+num_lags <- 8
+
+lagged_df <- data.frame(Date = GDP$sasdate)
+
+# Iterate over the columns in the original data frame
+for (i in names(GDP)) {
+  if (i != "sasdate") {
+    # Create lagged versions of the variable
+    for (lag in 1:num_lags) {
+      lagged_df <- lagged_df %>%
+        mutate(!!paste0(i, "_lag", lag) := lag(GDP[[i]], lag))
+    }
+  }
+}
+
+
+lagged_df<- lagged_df[-(1:8),]
+
+path <- "C:/Users/Utente/Desktop/Machine Learning project/GDP_lag.xls"
+write_xlsx(lagged_df,path)
+
+```
+
+
+
+## Principal components of 8 lags for each  variable 
+```{r}
+
+positions_na <- which(is.na(lagged_df), arr.ind = TRUE)
+
+
+lagged_df<- lagged_df[-248,]
+
+lagged_df<- lagged_df[-248.1,]
+
+positions_na <- which(is.na(lagged_df), arr.ind = TRUE)
+
+lagged_df[247,1666] <- mean(lagged_df[,1666], na.rm = T)
+
+
+
+
+list_of_datasets <- list()
+columns_per_dataset <- 8
+num_datasets <- ncol(lagged_df) / columns_per_dataset
+
+
+for (i in 1:num_datasets) {
+
+  start_col <- (i - 1) * columns_per_dataset + 2
+  end_col <- i * columns_per_dataset + 1
+  
+  
+  current_dataset <- lagged_df[, start_col:end_col]
+  
+  
+  list_of_datasets[[i]] <- current_dataset
+}
+
+positions_na <- which(is.na(lagged_df), arr.ind = TRUE)
+
+
+
+
+
+
+
+
+
+
+
+compute_pca <- function(df) {
+  pca_result <- prcomp(df, scale = TRUE,)
+  pc1loadings <-as.matrix(pca_result$rotation[,1])
+  pc2loadings <- as.matrix(pca_result$rotation[,2])
+  lagg<- scale(as.matrix(df), center=T,scale=T)
+  firstprincipal=data.frame(pc_1=c(lagg%*%pc1loadings))
+  secondprincipal=data.frame(pc_2=c(lagg%*%pc2loadings))
+  PCAdataset=data.frame(firstprincipal, secondprincipal)
+  return(PCAdataset)
+}
+
+
+pca_results <- lapply(list_of_datasets, compute_pca)
+MovingAverageFactors <- do.call(cbind, pca_results)
+
+
+
+
+
+a<- rbind(vectorofnames, vectorofnames)
+a<- a[-(1:2)]
+newcolumnsnames <- character(ncol(MovingAverageFactors))
+for (i in 1:ncol(MovingAverageFactors)) {
+  if(i%% 2 == 1){
+    newcolumnsnames[i]<- paste(a[i], "pc_1", sep = "_")}
+  else {
+   newcolumnsnames[i] <- paste(a[i], "pc_2", sep = "_")
+  }
+}
+
+colnames(MovingAverageFactors) <- newcolumnsnames
+MovingAverageFactors <- data.frame(sasdate=lagged_df$Date, MovingAverageFactors)
+
+
+
+path <- "C:/Users/Utente/Desktop/Machine Learning project/MovingAverageFactors_buono.xls"
+
+write_xlsx(MovingAverageFactors,path)
+
+```
+
+
+
+
+
+
+

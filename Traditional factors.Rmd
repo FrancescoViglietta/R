@@ -1,0 +1,385 @@
+---
+title: "Machine learning project Traditional factors"
+author: "Francesco Viglietta"
+date: "2023-10-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+setwd("C:/Users/Utente/Desktop/Machine Learning project")
+library(readr)
+library(tibble)
+library(tidyverse)
+library(readxl)
+library(writexl)
+quarterly <- read_csv("C:/Users/Utente/Desktop/Machine Learning project/QUARTERLY.csv")
+
+factors<- quarterly[1, ]
+quarterly <-quarterly[-1, ] 
+
+quarterly<- quarterly[-(260:261), ]
+#quarterly <-quarterly[, -248] 
+
+
+
+for (i in 2:ncol(quarterly)) {
+  if (quarterly[1, i] == 5) {
+    column <- log(as.numeric(unlist(quarterly[, i])))
+    quarterly[-1, i] <- diff(column)
+  } 
+  else if (quarterly[1, i] == 2) {
+    column <- quarterly[, i]
+    quarterly[-1, i] <- diff(as.numeric(unlist(column)), differences = 1L)
+  } 
+  else if (quarterly[1, i] == 3) {
+    column <- quarterly[, i]
+    quarterly[, i] <- diff(as.numeric(unlist(column)), differences = 2L)
+  } 
+  else if (quarterly[1, i] == 6) {
+    column <- log(as.numeric(unlist(quarterly[, i])))
+    quarterly[, i] <- c(6, NA, diff(column, differences = 2L)) 
+  }
+}
+
+
+quarterly<- quarterly[-(1:5), ]
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+##Defining the  Factors
+real_activity_factor <- c("sasdate","USPRIV", "USGOOD", "OUTMS", "PAYEMS", "IPMANSICS", "INDPRO", "MANEMP", "HOANBS", "UNRATE", "DMANEMP")
+
+##PERMIT INIZIA 2 ANNI DOPO; TCU DAGLI ANNI 80
+forward_looking_factor <- c("sasdate","AAAFFM", "T5YFFM", "PERMIT", "BUSINVx", "HOUST", "PERMITS", "TCU", "S&P div yield", "GS10TB3Mx", "CPF3MTB3Mx")
+
+prices_factor <- c("sasdate","CUSR0000SA0L2", "CUSR0000SAC", "DGDSRG3Q086SBEA", "PCECTPI", "CPITRNSL", "DNDGRG3Q086SBEA", "CUSR0000SA0L5", "CPIAUCSL", "WPSID61", "CPIULFSL")
+
+fourth_factor <- c("sasdate", "CES9093000001", "CES9092000001", "USGOVT", "GFDEBTNx", "REVOLSLx", "COMPRMS", "USFIRE", "USSERV", "EXUSEU")
+
+fifth_factor <- c("sasdate","OPHMFG","NWPIx","AWHMAN","HWIx","OPHPBS","OPHNFB","UNLPNBS","UNRATELTx","ULCMFG", "TLBSNNCBBDIx")
+
+
+
+
+
+```
+
+
+
+
+## Real activity factors  (with and without OUTMS)
+```{r}
+real_activity_variables <- quarterly[,real_activity_factor]
+real_activity_variables<- real_activity_variables[-257,]
+
+real_activity_variables1<- real_activity_variables[-(110:256),-4] #dialing with NA in the data
+real_activity_variables2<- real_activity_variables[(110:254),]
+
+
+#Real activity Factor prima del 6/1/1987 
+pcaresults<- prcomp(real_activity_variables1[,-1], scale=T, center=T)
+pc11loadings<-as.matrix(pcaresults$rotation[,1])
+l<- scale(as.matrix(real_activity_variables1[,-1]), center = T, scale = T)
+RealActivityFactor1=data.frame(Date=real_activity_variables1$sasdate, RealActivitypc_1a=c(l%*%pc11loadings))
+
+
+
+
+#Real activity Factor da usare dal 6/1/1987 in poi
+
+pcaresults1<- prcomp(real_activity_variables2[,-1], scale=T, center=T)
+pc12loadings<-as.matrix(pcaresults1$rotation[,1])
+l<- scale(as.matrix(real_activity_variables2[,-1]),center = T, scale = T)
+RealActivityFactor2=data.frame(Date=real_activity_variables2$sasdate, RealActivitypc_1a=c(l%*%pc12loadings))
+
+
+
+
+
+RealActivityFactor <- rbind(RealActivityFactor1, RealActivityFactor2)
+
+```
+
+
+
+
+
+
+
+## Five lags of real activity factor 1 and 2 
+```{r}
+
+lagged_RealActivityFactor<-RealActivityFactor%>%
+
+  mutate(RealActivityPC1_lag1 = lag(RealActivityFactor$RealActivitypc_1a, 1),
+    RealActivityPC1_lag2 = lag(RealActivityFactor$RealActivitypc_1a, 2),
+    RealActivityPC1_lag3 = lag(RealActivityFactor$RealActivitypc_1a, 3),
+    RealActivityPC1_lag4 = lag(RealActivityFactor$RealActivitypc_1a, 4),
+    RealActivityPC1_lag5 = lag(RealActivityFactor$RealActivitypc_1a, 5))
+
+lagged_RealActivityFactor <- lagged_RealActivityFactor[-(1:5),]
+
+
+
+
+
+path <- "C:/Users/Utente/Desktop/Machine Learning project/Lagged_RealActivityFactor_buono.xls"
+write_xlsx(lagged_RealActivityFactor, path)
+
+
+```
+
+
+
+
+
+Forward Looking factor
+```{r}
+forward_looking_variables <- quarterly[,forward_looking_factor]
+forward_looking_variables1 <- forward_looking_variables[-(28:254),-8] #eliminating 9/1/1959-12/1/1959-3/1/1960 and the whole TCU column
+
+forward_looking_variables1<- forward_looking_variables1[-1,] #data on which to compute the first factor 
+pcaresults<- prcomp(forward_looking_variables1[,-1], scale=T, center=T)
+pc11loadings<-as.matrix(pcaresults$rotation[,1])
+l<- scale(as.matrix(forward_looking_variables1[,-1]), center = T, scale=T)
+ForwardLookingFactor1=data.frame(Date=forward_looking_variables1$sasdate,ForwardLookingpc_1a=c(l%*%pc11loadings))
+
+forward_looking_variables2 <- forward_looking_variables[29:254,]
+forward_looking_variables2 <- forward_looking_variables2[-226,]
+#forward_looking_variables2[225,9]<- 0
+
+pcaresultsa<- prcomp(forward_looking_variables2[,-1], scale=T, center=T)
+pc11aloadings<-as.matrix(pcaresultsa$rotation[,1])
+l<- scale(as.matrix(forward_looking_variables2[,-1]), center=T, scale=T)
+ForwardLookingFactor2=data.frame(Date=forward_looking_variables2$sasdate,ForwardLookingpc_1a=c(l%*%pc11aloadings))
+
+ForwardLookingFactor <- rbind(ForwardLookingFactor1,ForwardLookingFactor2)
+
+
+```
+Here i started to compute the first factors from 	6/1/1960 without TCU, then i compute another one with TCU included as soon as it becomes available in 3/1/1967. The two are merged
+
+
+
+## Five lags of Forward Looking factor
+```{r}
+
+lagged_ForwardLookingFactor<-ForwardLookingFactor%>%
+
+  mutate(PC1_lag1 = lag(ForwardLookingFactor$ForwardLookingpc_1a, 1),
+    PC1_lag2 = lag(ForwardLookingFactor$ForwardLookingpc_1a, 2),
+    PC1_lag3 = lag(ForwardLookingFactor$ForwardLookingpc_1a, 3),
+    PC1_lag4 = lag(ForwardLookingFactor$ForwardLookingpc_1a, 4),
+    PC1_lag5 = lag(ForwardLookingFactor$ForwardLookingpc_1a, 5))
+
+lagged_ForwardLookingFactor <- lagged_ForwardLookingFactor[-(1:5),]
+
+
+
+
+
+path <- "C:/Users/Utente/Desktop/Machine Learning project/Lagged_ForwardLookingFactor_buono.xls"
+write_xlsx(lagged_ForwardLookingFactor, path)
+
+
+
+
+
+```
+
+
+
+
+
+##  Fifth Factor
+```{r}
+Fifth_factor_variables <- quarterly[,fifth_factor]
+columnstobeselected <- c("sasdate","NWPIx","AWHMAN","HWIx","OPHPBS","OPHNFB","UNLPNBS","UNRATELTx", "TLBSNNCBBDIx")
+Fifth_factor_variables1 <- Fifth_factor_variables[1:109,columnstobeselected]
+Fifth_factor_variables2 <- Fifth_factor_variables[110:254,]
+
+
+
+pcaresults<- prcomp(Fifth_factor_variables1[,-1], scale=T, center=T)
+pc11loadings<-as.matrix(pcaresults$rotation[,1])
+l<- scale(as.matrix(Fifth_factor_variables1[,-1]), center = T, scale=T)
+Fifth_factor1=data.frame(Date=Fifth_factor_variables1$sasdate,Fifth_factorpc_1a=c(l%*%pc11loadings))
+
+
+pcaresults<- prcomp(Fifth_factor_variables2[,-1], scale=T, center=T)
+pc11loadings<-as.matrix(pcaresults$rotation[,1])
+l<- scale(as.matrix(Fifth_factor_variables2[,-1]), center=T, scale=T)
+Fifth_factor2=data.frame(Date=Fifth_factor_variables2$sasdate,Fifth_factorpc_1a=c(l%*%pc11loadings))
+
+
+Fifth_factor <- rbind(Fifth_factor1, Fifth_factor2)
+
+```
+
+
+
+## Five lags of fifth factor
+```{r}
+lagged_Fifth_factor<-Fifth_factor%>%
+
+  mutate(Fifth_factorPC1_lag1 = lag(Fifth_factor$Fifth_factorpc_1a, 1),
+    Fifth_factorPC1_lag2 = lag(Fifth_factor$Fifth_factorpc_1a, 2),
+    Fifth_factorPC1_lag3 = lag(Fifth_factor$Fifth_factorpc_1a, 3),
+    Fifth_factorPC1_lag4 = lag(Fifth_factor$Fifth_factorpc_1a, 4),
+    Fifth_factorPC1_lag5 = lag(Fifth_factor$Fifth_factorpc_1a, 5))
+
+lagged_Fifth_factor <- lagged_Fifth_factor[-(1:5),]
+
+path <- "C:/Users/Utente/Desktop/Machine Learning project/Lagged_Fifth_factor_buono.xls"
+write_xlsx(lagged_Fifth_factor, path)
+
+
+```
+
+
+
+
+
+
+##  Fourth Factor
+```{r}
+Fourth_factor_variables <- quarterly[, fourth_factor]
+
+columnstobeselected1<-c("sasdate", "CES9093000001", "CES9092000001", "USGOVT", "USFIRE", "USSERV")
+columnstobeselected2 <- c("sasdate", "CES9093000001", "CES9092000001", "USGOVT", "USFIRE", "USSERV","GFDEBTNx")
+columnstobeselected3 <-c("sasdate", "CES9093000001", "CES9092000001", "USGOVT", "USFIRE", "USSERV","GFDEBTNx","REVOLSLx")
+columnstobeselected4 <-c("sasdate", "CES9093000001", "CES9092000001", "USGOVT", "GFDEBTNx", "REVOLSLx", "COMPRMS", "USFIRE", "USSERV")
+columnstobeselected5 <-c("sasdate", "CES9093000001", "CES9092000001", "USGOVT", "GFDEBTNx", "REVOLSLx", "COMPRMS", "USFIRE", "USSERV","EXUSEU")
+
+Fourth_factor_variables1 <-Fourth_factor_variables[1:25,columnstobeselected1]
+Fourth_factor_variables2 <-Fourth_factor_variables[26:33,columnstobeselected2]
+Fourth_factor_variables3 <-Fourth_factor_variables[34:109,columnstobeselected3]      #dealing with NA in the data
+Fourth_factor_variables4 <-Fourth_factor_variables[110:157,columnstobeselected4]
+Fourth_factor_variables5 <-Fourth_factor_variables[158:254,columnstobeselected5]
+
+
+
+pcaresults<- prcomp(Fourth_factor_variables1[,-1], scale=T, center=T)
+pc11loadings<-as.matrix(pcaresults$rotation[,1])
+l<- scale(as.matrix(Fourth_factor_variables1[,-1]), center=T, scale=T)
+Fourth_factor1=data.frame(Date=Fourth_factor_variables1$sasdate,Fourth_factorpc_1a=c(l%*%pc11loadings))
+
+
+pcaresults<- prcomp(Fourth_factor_variables2[,-1], scale=T, center=T)
+pc11loadings<-as.matrix(pcaresults$rotation[,1])
+l<- scale(as.matrix(Fourth_factor_variables2[,-1]),scale=T, center=T)
+Fourth_factor2=data.frame(Date=Fourth_factor_variables2$sasdate,Fourth_factorpc_1a=c(l%*%pc11loadings))
+
+pcaresults<- prcomp(Fourth_factor_variables3[,-1], scale=T, center=T)
+pc11loadings<-as.matrix(pcaresults$rotation[,1])
+l<- scale(as.matrix(Fourth_factor_variables3[,-1]),scale=T, center=T)
+Fourth_factor3=data.frame(Date=Fourth_factor_variables3$sasdate,Fourth_factorpc_1a=c(l%*%pc11loadings))
+
+
+pcaresults<- prcomp(Fourth_factor_variables4[,-1], scale=T, center=T)
+pc11loadings<-as.matrix(pcaresults$rotation[,1])
+l<- scale(as.matrix(Fourth_factor_variables4[,-1]), scale=T, center=T)
+Fourth_factor4=data.frame(Date=Fourth_factor_variables4$sasdate,Fourth_factorpc_1a=c(l%*%pc11loadings))
+
+
+pcaresults<- prcomp(Fourth_factor_variables5[,-1], scale=T, center=T)
+pc11loadings<-as.matrix(pcaresults$rotation[,1])
+l<- scale(as.matrix(Fourth_factor_variables5[,-1]),scale=T, center=T)
+Fourth_factor5=data.frame(Date=Fourth_factor_variables5$sasdate,Fourth_factorpc_1a=c(l%*%pc11loadings))
+
+
+Fourth_factor <- rbind(Fourth_factor1, Fourth_factor2,Fourth_factor3,Fourth_factor4,Fourth_factor5)
+
+```
+
+
+
+
+## Five lags of Fourth factor
+```{r}
+lagged_Fourth_factor<-Fourth_factor%>%
+
+  mutate(Fourth_factorPC1_lag1 = lag(Fourth_factor$Fourth_factorpc_1a, 1),
+    Fourth_factorPC1_lag2 = lag(Fourth_factor$Fourth_factor, 2),
+    Fourth_factorPC1_lag3 = lag(Fourth_factor$Fourth_factorpc_1a, 3),
+    Fourth_factorPC1_lag4 = lag(Fourth_factor$Fourth_factorpc_1a, 4),
+    Fourth_factorPC1_lag5 = lag(Fourth_factor$Fourth_factorpc_1a, 5))
+
+lagged_Fourth_factor <- lagged_Fourth_factor[-(1:5),]
+
+path <- "C:/Users/Utente/Desktop/Machine Learning project/Lagged_Fourth_factor_buono.xls"
+write_xlsx(lagged_Fourth_factor, path)
+
+
+
+
+```
+
+1 1-27 
+2 28-35
+3 36-111
+4 112-159
+5 160-256
+
+
+
+
+Third factor
+```{r}
+prices_variables<-quarterly[,prices_factor]
+#prices_variables<-prices_variables[-257,]
+
+pcaresults <- prcomp(prices_variables[,-1], scale=T, center=T)
+pc1loadings<- as.matrix(pcaresults$rotation[,1]) 
+l <- scale(as.matrix(prices_variables[,-1]), scale=T, center=T)
+price_factors <- data.frame(date=prices_variables$sasdate, Pricefactor_pc1a=c(l%*% pc1loadings))
+
+
+
+```
+
+
+
+
+
+Lags of the third factor
+```{r}
+lagged_prices_factor <- price_factors %>%
+  mutate(
+    Pricefactor_PC1_lag1 = lag(price_factors$Pricefactor_pc1a, 1),
+    Pricefactor_PC1_lag2 = lag(price_factors$Pricefactor_pc1a, 2),
+    Pricefactor_PC1_lag3 = lag(price_factors$Pricefactor_pc1a, 3),
+    Pricefactor_PC1_lag4 = lag(price_factors$Pricefactor_pc1a, 4),
+    Pricefactor_PC1_lag5 = lag(price_factors$Pricefactor_pc1a, 5)
+  )
+
+lagged_prices_factor <- lagged_prices_factor[-(1:5),]
+
+file_path <- "C:/Users/Utente/Desktop/Machine Learning project/Lagged_prices_factor_buono.xlsx"
+
+# Export the data frame to an Excel file
+write_xlsx(lagged_prices_factor, path=file_path)
+```
+
+
+
+

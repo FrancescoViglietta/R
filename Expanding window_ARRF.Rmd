@@ -1,0 +1,540 @@
+---
+title: "Expanding window_ARRF"
+author: "Francesco Viglietta"
+date: "2023-10-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+setwd("C:/Users/Utente/Desktop/Machine Learning project")
+library(devtools)
+library(foreach)
+library(doParallel)
+cl <- makeCluster(2)  
+registerDoParallel(cl)
+library(tictoc)
+library(MacroRF)
+library(readxl)
+library(readr)
+ST  <-  read_excel("C:/Users/Utente/Desktop/Machine Learning project/CARTELLA BUONA/ST/ST_DEFINITIVO.xlsx", col_types = "numeric")
+
+ST <- ST[-1,-1]
+
+
+```
+
+
+
+
+```{r}
+list_of_datasets <- list()
+list_of_mrf_outputs <- list()
+
+sequence_vector=seq(9, by = 9, length = 24)
+counter <- 1
+for ( i in sequence_vector) {
+  current_dataset<- ST[1:i,]
+  list_of_datasets[[counter]] <- current_dataset
+   counter <- counter + 1 
+}
+
+
+Dataframeofsquarederror <- data.frame(matrix(NA, nrow = 24, ncol = 8))
+
+```
+
+
+
+
+
+
+```{r}
+tic()
+squared_errors<- foreach (i=3) %dopar% {
+library(MacroRF)
+set.seed(0)
+linear_part <- c(3,4)
+
+ 
+mrf_output <- MRF(data=list_of_datasets[[i]], y.pos=1, S.pos=2:ncol(list_of_datasets[[i]]),   x.pos=linear_part, oos.pos=c(), minsize= 10, mtry.frac = 1/3, min.leaf.frac.of.x=1, VI=TRUE, ERT=FALSE, quantile.rate=NULL, S.priority.vec=NULL,random.x=FALSE,howmany.random.x=1, howmany.keep.best.VI=20, cheap.look.at.GTVPs=TRUE, prior.var=c(), prior.mean=c(), subsampling.rate=1, rw.regul=0.5, keep.forest=TRUE, block.size=12, trend.pos=2, trend.push=4, fast.rw=TRUE, ridge.lambda=0.01, HRW=0, B=100, resampling.opt=2, printb=TRUE)
+list_of_mrf_outputs[[i]] <- mrf_output
+
+ 
+ 
+newdata=ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),2:906]
+ 
+pred1<- pred.given.mrf(mrf.output=mrf_output, newdata = newdata)
+ 
+(as.matrix(ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),1])-pred1)^2  
+
+}
+for(i in 3){
+Dataframeofsquarederror[i,]= squared_errors[[1]]}
+
+toc()
+
+
+```
+
+
+
+
+
+
+
+
+
+rw.regul=0.75 block.size=10
+```{r}
+
+
+
+
+
+
+
+for (i in 4:5) {
+ 
+
+set.seed(0)
+linear_part <- c(3,4)
+
+ 
+mrf_output <- MRF(data=list_of_datasets[[i]], y.pos=1, S.pos=2:ncol(list_of_datasets[[i]]),   x.pos=linear_part, oos.pos=c(), minsize= 10, mtry.frac = 1/3, min.leaf.frac.of.x=1, VI=TRUE, ERT=FALSE, quantile.rate=NULL, S.priority.vec=NULL,random.x=FALSE,howmany.random.x=1, howmany.keep.best.VI=20, cheap.look.at.GTVPs=TRUE, prior.var=c(), prior.mean=c(), subsampling.rate=0.75, rw.regul=0.75, keep.forest=TRUE, block.size=10, trend.pos=2, trend.push=4, fast.rw=TRUE, ridge.lambda=0.01, HRW=0, B=100, resampling.opt=2, printb=TRUE)
+    list_of_mrf_outputs[[i]] <- mrf_output
+
+ 
+ 
+    newdata=ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),2:906]
+ 
+    pred1<- pred.given.mrf(mrf.output=mrf_output, newdata = newdata)
+ 
+    Dataframeofsquarederror[i,]=(as.matrix(ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),1])-pred1)^2  
+
+
+}
+
+
+```
+
+
+```{r}
+
+
+
+
+
+for (i in 6:7) {
+ 
+
+set.seed(0)
+linear_part <- c(3,4)
+
+ 
+mrf_output <- MRF(data=list_of_datasets[[i]], y.pos=1, S.pos=2:ncol(list_of_datasets[[i]]),   x.pos=linear_part, oos.pos=c(), minsize= 10, mtry.frac = 1/3, min.leaf.frac.of.x=1, VI=TRUE, ERT=FALSE, quantile.rate=NULL, S.priority.vec=NULL,random.x=FALSE,howmany.random.x=1, howmany.keep.best.VI=20, cheap.look.at.GTVPs=TRUE, prior.var=c(), prior.mean=c(), subsampling.rate=0.75, rw.regul=0.75, keep.forest=TRUE, block.size=12, trend.pos=2, trend.push=4, fast.rw=TRUE, ridge.lambda=0.01, HRW=0, B=100, resampling.opt=2, printb=TRUE)
+    list_of_mrf_outputs[[i]] <- mrf_output
+
+ 
+ 
+    newdata=ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),2:906]
+ 
+    pred1<- pred.given.mrf(mrf.output=mrf_output, newdata = newdata)
+ 
+    Dataframeofsquarederror[i,]=(as.matrix(ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),1])-pred1)^2  
+
+
+}
+```
+
+
+
+
+
+
+with rw.regl=0.5
+```{r}
+
+for (i in 8:9) {
+ 
+
+set.seed(0)
+linear_part <- c(3,4)
+
+ 
+mrf_output <- MRF(data=list_of_datasets[[i]], y.pos=1, S.pos=2:ncol(list_of_datasets[[i]]),   x.pos=linear_part, oos.pos=c(), minsize= 10, mtry.frac = 1/3, min.leaf.frac.of.x=1, VI=TRUE, ERT=FALSE, quantile.rate=NULL, S.priority.vec=NULL,random.x=FALSE,howmany.random.x=1, howmany.keep.best.VI=20, cheap.look.at.GTVPs=TRUE, prior.var=c(), prior.mean=c(), subsampling.rate=0.75, rw.regul=0.5, keep.forest=TRUE, block.size=12, trend.pos=2, trend.push=4, fast.rw=TRUE, ridge.lambda=0.01, HRW=0, B=100, resampling.opt=2, printb=TRUE)
+    list_of_mrf_outputs[[i]] <- mrf_output
+
+ 
+ 
+    newdata=ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),2:906]
+ 
+    pred1<- pred.given.mrf(mrf.output=mrf_output, newdata = newdata)
+ 
+    Dataframeofsquarederror[i,]=(as.matrix(ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),1])-pred1)^2  
+
+
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+for (i in 10:11) {
+ 
+
+set.seed(0)
+linear_part <- c(3,4)
+
+ 
+mrf_output <- MRF(data=list_of_datasets[[i]], y.pos=1, S.pos=2:ncol(list_of_datasets[[i]]),   x.pos=linear_part, oos.pos=c(), minsize= 10, mtry.frac = 1/3, min.leaf.frac.of.x=1, VI=TRUE, ERT=FALSE, quantile.rate=NULL, S.priority.vec=NULL,random.x=FALSE,howmany.random.x=1, howmany.keep.best.VI=20, cheap.look.at.GTVPs=TRUE, prior.var=c(), prior.mean=c(), subsampling.rate=0.75, rw.regul=0.5, keep.forest=TRUE, block.size=12, trend.pos=2, trend.push=4, fast.rw=TRUE, ridge.lambda=0.01, HRW=0, B=100, resampling.opt=2, printb=TRUE)
+    list_of_mrf_outputs[[i]] <- mrf_output
+
+ 
+ 
+    newdata=ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),2:906]
+ 
+    pred1<- pred.given.mrf(mrf.output=mrf_output, newdata = newdata)
+ 
+    Dataframeofsquarederror[i,]=(as.matrix(ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),1])-pred1)^2  
+
+
+}
+```
+
+
+
+
+
+```{r}
+
+for (i in 12:13) {
+ 
+
+set.seed(0)
+linear_part <- c(3,4)
+
+ 
+mrf_output <- MRF(data=list_of_datasets[[i]], y.pos=1, S.pos=2:ncol(list_of_datasets[[i]]),   x.pos=linear_part, oos.pos=c(), minsize= 10, mtry.frac = 1/3, min.leaf.frac.of.x=1, VI=TRUE, ERT=FALSE, quantile.rate=NULL, S.priority.vec=NULL,random.x=FALSE,howmany.random.x=1, howmany.keep.best.VI=20, cheap.look.at.GTVPs=TRUE, prior.var=c(), prior.mean=c(), subsampling.rate=0.75, rw.regul=0.5, keep.forest=TRUE, block.size=12, trend.pos=2, trend.push=4, fast.rw=TRUE, ridge.lambda=0.01, HRW=0, B=100, resampling.opt=2, printb=TRUE)
+    list_of_mrf_outputs[[i]] <- mrf_output
+
+ 
+ 
+    newdata=ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),2:906]
+ 
+    pred1<- pred.given.mrf(mrf.output=mrf_output, newdata = newdata)
+ 
+    Dataframeofsquarederror[i,]=(as.matrix(ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),1])-pred1)^2  
+
+
+
+}
+```
+
+
+
+```{r}
+
+for (i in 14:15
+     
+     ) {
+ 
+
+set.seed(0)
+linear_part <- c(3,4)
+
+ 
+mrf_output <- MRF(data=list_of_datasets[[i]], y.pos=1, S.pos=2:ncol(list_of_datasets[[i]]),   x.pos=linear_part, oos.pos=c(), minsize= 10, mtry.frac = 1/3, min.leaf.frac.of.x=1, VI=TRUE, ERT=FALSE, quantile.rate=NULL, S.priority.vec=NULL,random.x=FALSE,howmany.random.x=1, howmany.keep.best.VI=20, cheap.look.at.GTVPs=TRUE, prior.var=c(), prior.mean=c(), subsampling.rate=0.75, rw.regul=0.5, keep.forest=TRUE, block.size=12, trend.pos=2, trend.push=4, fast.rw=TRUE, ridge.lambda=0.01, HRW=0, B=100, resampling.opt=2, printb=TRUE)
+    list_of_mrf_outputs[[i]] <- mrf_output
+
+ 
+ 
+    newdata=ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),2:906]
+ 
+    pred1<- pred.given.mrf(mrf.output=mrf_output, newdata = newdata)
+ 
+    Dataframeofsquarederror[i,]=(as.matrix(ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),1])-pred1)^2  
+
+
+
+}
+```
+
+
+
+
+
+
+
+
+```{r}
+
+for (i in 16:17) {
+ 
+
+set.seed(0)
+linear_part <- c(3,4)
+
+ 
+mrf_output <- MRF(data=list_of_datasets[[i]], y.pos=1, S.pos=2:ncol(list_of_datasets[[i]]),   x.pos=linear_part, oos.pos=c(), minsize= 10, mtry.frac = 1/3, min.leaf.frac.of.x=1, VI=TRUE, ERT=FALSE, quantile.rate=NULL, S.priority.vec=NULL,random.x=FALSE,howmany.random.x=1, howmany.keep.best.VI=20, cheap.look.at.GTVPs=TRUE, prior.var=c(), prior.mean=c(), subsampling.rate=0.75, rw.regul=0.5, keep.forest=TRUE, block.size=12, trend.pos=2, trend.push=4, fast.rw=TRUE, ridge.lambda=0.01, HRW=0, B=100, resampling.opt=2, printb=TRUE)
+    list_of_mrf_outputs[[i]] <- mrf_output
+
+ 
+ 
+    newdata=ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),2:906]
+ 
+    pred1<- pred.given.mrf(mrf.output=mrf_output, newdata = newdata)
+ 
+    Dataframeofsquarederror[i,]=(as.matrix(ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),1])-pred1)^2  
+
+
+
+}
+```
+
+
+
+
+
+
+
+```{r}
+
+for (i in 18) {
+ 
+
+set.seed(0)
+linear_part <- c(3,4)
+
+ 
+mrf_output <- MRF(data=list_of_datasets[[i]], y.pos=1, S.pos=2:ncol(list_of_datasets[[i]]),   x.pos=linear_part, oos.pos=c(), minsize= 10, mtry.frac = 1/3, min.leaf.frac.of.x=1, VI=TRUE, ERT=FALSE, quantile.rate=NULL, S.priority.vec=NULL,random.x=FALSE,howmany.random.x=1, howmany.keep.best.VI=20, cheap.look.at.GTVPs=TRUE, prior.var=c(), prior.mean=c(), subsampling.rate=0.75, rw.regul=0.5, keep.forest=TRUE, block.size=12, trend.pos=2, trend.push=4, fast.rw=TRUE, ridge.lambda=0.01, HRW=0, B=100, resampling.opt=2, printb=TRUE)
+    list_of_mrf_outputs[[i]] <- mrf_output
+
+ 
+ 
+    newdata=ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),2:906]
+ 
+    pred1<- pred.given.mrf(mrf.output=mrf_output, newdata = newdata)
+ 
+    Dataframeofsquarederror[i,]=(as.matrix(ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),1])-pred1)^2  
+
+
+
+}
+```
+
+
+```{r}
+for (i in 19:20) {
+ 
+
+set.seed(0)
+linear_part <- c(3,4)
+
+ 
+mrf_output <- MRF(data=list_of_datasets[[i]], y.pos=1, S.pos=2:ncol(list_of_datasets[[i]]),   x.pos=linear_part, oos.pos=c(), minsize= 10, mtry.frac = 1/3, min.leaf.frac.of.x=1, VI=TRUE, ERT=FALSE, quantile.rate=NULL, S.priority.vec=NULL,random.x=FALSE,howmany.random.x=1, howmany.keep.best.VI=20, cheap.look.at.GTVPs=TRUE, prior.var=c(), prior.mean=c(), subsampling.rate=0.75, rw.regul=0.5, keep.forest=TRUE, block.size=12, trend.pos=2, trend.push=4, fast.rw=TRUE, ridge.lambda=0.01, HRW=0, B=100, resampling.opt=2, printb=TRUE)
+    list_of_mrf_outputs[[i]] <- mrf_output
+
+ 
+ 
+    newdata=ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),2:906]
+ 
+    pred1<- pred.given.mrf(mrf.output=mrf_output, newdata = newdata)
+ 
+    Dataframeofsquarederror[i,]=(as.matrix(ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),1])-pred1)^2  
+
+
+
+}
+```
+
+```{r}
+for (i in 21:22) {
+ 
+
+set.seed(0)
+linear_part <- c(3,4)
+
+ 
+mrf_output <- MRF(data=list_of_datasets[[i]], y.pos=1, S.pos=2:ncol(list_of_datasets[[i]]),   x.pos=linear_part, oos.pos=c(), minsize= 10, mtry.frac = 1/3, min.leaf.frac.of.x=1, VI=TRUE, ERT=FALSE, quantile.rate=NULL, S.priority.vec=NULL,random.x=FALSE,howmany.random.x=1, howmany.keep.best.VI=20, cheap.look.at.GTVPs=TRUE,
+                  
+                  
+                  
+                  
+                  
+                  prior.var=c(), prior.mean=c(), subsampling.rate=0.75, rw.regul=0.5, keep.forest=TRUE, block.size=12, trend.pos=2, trend.push=4, fast.rw=TRUE, ridge.lambda=0.01, HRW=0, B=100, resampling.opt=2, printb=TRUE)
+    list_of_mrf_outputs[[i]] <- mrf_output
+
+ 
+ 
+    newdata=ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),2:906]
+ 
+    pred1<- pred.given.mrf(mrf.output=mrf_output, newdata = newdata)
+ 
+    Dataframeofsquarederror[i,]=(as.matrix(ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),1])-pred1)^2  
+
+
+
+}
+```
+check what variable 735 is
+
+
+
+
+
+
+
+```{r}
+for (i in 23:24) {
+ 
+
+set.seed(0)
+linear_part <- c(3,4)
+
+ 
+mrf_output <- MRF(data=list_of_datasets[[i]], y.pos=1, S.pos=2:ncol(list_of_datasets[[i]]),   x.pos=linear_part, oos.pos=c(), minsize= 10, mtry.frac = 1/3, min.leaf.frac.of.x=1, VI=TRUE, ERT=FALSE, quantile.rate=NULL, S.priority.vec=NULL,random.x=FALSE,howmany.random.x=1, howmany.keep.best.VI=20, cheap.look.at.GTVPs=TRUE,
+                  
+                  
+                  
+                  
+                  
+                  prior.var=c(), prior.mean=c(), subsampling.rate=0.75, rw.regul=0.5, keep.forest=TRUE, block.size=12, trend.pos=2, trend.push=4, fast.rw=TRUE, ridge.lambda=0.01, HRW=0, B=100, resampling.opt=2, printb=TRUE)
+    list_of_mrf_outputs[[i]] <- mrf_output
+
+ 
+ 
+    newdata=ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),2:906]
+ 
+    pred1<- pred.given.mrf(mrf.output=mrf_output, newdata = newdata)
+ 
+    Dataframeofsquarederror[i,]=(as.matrix(ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),1])-pred1)^2  
+
+
+
+}
+```
+
+
+
+
+
+
+
+
+
+
+trying for covid
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+path <- "C:/Users/Utente/Desktop/Machine Learning project/Matrix_of_squared_error_ARRF.xls"
+
+library(writexl)
+
+write_xlsx(Dataframeofsquarederror,path)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+###estimating AR(4)
+
+
+#install.packages('forecast')
+library(forecast)
+x=list_of_datasets[[4]][,c(1,3,4,5,6)]
+new_data=ST[37:44,c(3,4,5,6)]
+model=lm(y~V3+V4+V5+V6, data=x)
+prediction=predict(model,new_data)
+prediction=matrix(prediction,nrow=8,ncol=1)
+
+###forecasting
+Dataframeofsquarederror_lm <- data.frame(matrix(NA, nrow = 24, ncol = 8))
+for (i in 4:24){
+x=list_of_datasets[[i]][,c(1,3,4,5,6)]
+model=lm(GDPC1~GDPC1_lag1+GDPC1_lag2+GDPC1_lag3+GDPC1_lag4, data=x)
+new_data=ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),c(1,3,4,5,6)]
+prediction=matrix(predict(model,new_data))
+Dataframeofsquarederror_lm[i,]=(as.matrix(ST[((nrow(list_of_datasets[[i]])+1):(nrow(list_of_datasets[[i]])+8)),1])-prediction)^2 
+}
+
+##excel
+
+path <- "C:/Users/Luigi Murialdo/Documents/machine learning/macroeconomy as a random forest/Dataframeofsquarederror_lm.xls"
+library(writexl)
+write_xlsx(Dataframeofsquarederror_lm, path)
+```
+
+
+
+
+
+
+
+
+
+
+
